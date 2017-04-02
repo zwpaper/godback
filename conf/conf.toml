@@ -1,0 +1,14 @@
+[app]
+    name = "God"
+    host = "localhost"
+
+[http]
+    port = "8080"
+    timeout = 10
+
+[etcd]
+    bindaddr = ["http://127.0.0.1:2379"]
+    prefix = "/codespaper/"
+
+[log]
+    level = "debug"
