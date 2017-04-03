@@ -6,7 +6,7 @@ import (
 
 	"github.com/astaxie/beego/logs"
 	"github.com/gin-gonic/gin"
-	"github.com/zwpaper/godinwerewolves/store"
+	"github.com/zwpaper/godback/store"
 )
 
 var (
@@ -98,7 +98,7 @@ func enterRoom(c *gin.Context) {
 	logs.Debug("Received enter room request")
 	var err error
 	request := &roomEnterRequset{}
-	response := &roomCreationResponse{}
+	response := &roomEnterResponse{}
 	if err = c.BindJSON(request); err != nil {
 		errInfo = fmt.Sprintf("Can not parse the request: %v", err)
 		logs.Error(errInfo)
@@ -126,9 +126,21 @@ func enterRoom(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, response)
 		return
 	}
+
+	players, err := store.GetAllPlayersInRoom(request.RoomID)
+	if err != nil {
+		errInfo = fmt.Sprintf(
+			"Can not get players in room %v \n%v", request.RoomID, err)
+		logs.Emergency(errInfo)
+		response.Err = errInfo
+		c.JSON(http.StatusInternalServerError, response)
+		return
+	}
 	response.ID = request.RoomID
+	response.Players = *players
 	response.Err = ""
 	response.Number = countPlayers(room)
 	c.JSON(http.StatusCreated, response)
+	logs.Info("Response: %v", response)
 	return
 }

@@ -1,5 +1,7 @@
 package server
 
+import "github.com/zwpaper/godback/store"
+
 type roomCreationRequset struct {
 	UID       string `json:"uid"`
 	Name      string `json:"name"`
@@ -25,7 +27,8 @@ type roomEnterRequset struct {
 }
 
 type roomEnterResponse struct {
-	ID     string `json:"id"`
-	Number uint   `json:"number"`
-	Err    string `json:"err"`
+	ID      string         `json:"id"`
+	Number  uint           `json:"number"`
+	Players []store.Player `json:"players"`
+	Err     string         `json:"err"`
 }

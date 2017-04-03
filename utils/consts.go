@@ -4,7 +4,7 @@ import "github.com/astaxie/beego/logs"
 
 const (
 	PathRoom   = "rooms"
-	PathPlayer = "player"
+	PathPlayer = "players"
 
 	PathUsed   = "used"
 	PathPool   = "pool"

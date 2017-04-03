@@ -10,7 +10,7 @@ import (
 
 	"github.com/astaxie/beego/logs"
 	"github.com/coreos/etcd/client"
-	"github.com/zwpaper/godinwerewolves/utils"
+	"github.com/zwpaper/godback/utils"
 	"golang.org/x/net/context"
 )
 
@@ -67,6 +67,16 @@ func Init(bindaddr []string, p string) (err error) {
 func get(key string) (*client.Node, error) {
 	keyAPI := client.NewKeysAPI(Client)
 	resp, err := keyAPI.Get(context.Background(), path.Join(prefix, key), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	log.Debug("Got etcd nodes: %v", resp)
+	return resp.Node, nil
+}
+func getFullPath(key string) (*client.Node, error) {
+	keyAPI := client.NewKeysAPI(Client)
+	resp, err := keyAPI.Get(context.Background(), key, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -218,7 +228,7 @@ func getAvailRoom() ([]int, error) {
 		if _, ok := usedRoomMap[id]; !ok {
 			idInPool = append(idInPool, id)
 			if len(idInPool) > utils.PoolSize {
-				log.Info("Got id pool", idInPool)
+				log.Info("Got id pool: %v", idInPool)
 				return idInPool, nil
 			}
 		}
@@ -272,4 +282,38 @@ func AddPlayerToRoom(roomID string, player *Player) (err error) {
 	}
 
 	return nil
+}
+
+func GetAllPlayersInRoom(roomID string) (*[]Player, error) {
+	playerURL := path.Join(utils.PathRoom, utils.PathUsed, roomID, utils.PathPlayer)
+	playersNode, err := get(playerURL)
+	if err != nil {
+		errInfo = fmt.Sprintf("Can not get player in %v!", roomID)
+		log.Error(errInfo)
+		return nil, fmt.Errorf(errInfo)
+	}
+
+	players := &[]Player{}
+	player := &Player{}
+	for _, node := range playersNode.Nodes {
+		playerKey := node.Key
+		playerNode, err := getFullPath(playerKey)
+		if err != nil {
+			errInfo = fmt.Sprintf("Can not get player %v config: %v",
+				playerKey, err)
+			log.Error(errInfo)
+			return nil, fmt.Errorf(errInfo)
+		}
+		err = json.Unmarshal([]byte(playerNode.Value), player)
+		if err != nil {
+			errInfo = fmt.Sprintf("Can not get player %v config: %v",
+				playerKey, err)
+			log.Error(errInfo)
+			return nil, fmt.Errorf(errInfo)
+		}
+
+		*players = append(*players, *player)
+	}
+	log.Info("Get players: %v", players)
+	return players, nil
 }
