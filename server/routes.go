@@ -20,7 +20,7 @@ func setRoute(r *gin.Engine) {
 			"message": "room",
 			"id":      c.Param("room")})
 	})
-	r.POST("/room/:room/player", enterRoom)
+	r.GET("/room/:room/player", enterRoom)
 }
 
 // Room
@@ -66,6 +66,9 @@ func createRoom(c *gin.Context) {
 	// 		c.JSON(http.StatusInternalServerError, response)
 	// 		return
 	// 	}
+	hub := newHub()
+	roomHub[id] = hub
+	go hub.run()
 
 	response.ID = id
 	response.Err = ""
@@ -96,51 +99,43 @@ func countPlayers(room *store.Room) uint {
 
 func enterRoom(c *gin.Context) {
 	logs.Debug("Received enter room request")
-	var err error
-	request := &roomEnterRequset{}
-	response := &roomEnterResponse{}
-	if err = c.BindJSON(request); err != nil {
-		errInfo = fmt.Sprintf("Can not parse the request: %v", err)
-		logs.Error(errInfo)
-		response.Err = errInfo
-		c.JSON(http.StatusBadRequest, response)
-		return
-	}
-	logs.Debug("%v", request)
+	serveWs(roomHub[c.Param("room")], c.Writer, c.Request)
 
-	room, err := store.GetRoom(request.RoomID)
-	if err != nil {
-		errInfo = fmt.Sprintf("Can not get room %v info!\n%v", request.RoomID, err)
-		logs.Error(errInfo)
-		response.Err = errInfo
-		c.JSON(http.StatusInternalServerError, response)
-		return
-	}
-	err = store.AddPlayerToRoom(request.RoomID, &store.Player{
-		ID:   request.UID,
-		Name: request.Name})
-	if err != nil {
-		errInfo = fmt.Sprintf("Can not add room creater to room!\n%v", err)
-		logs.Emergency(errInfo)
-		response.Err = errInfo
-		c.JSON(http.StatusInternalServerError, response)
-		return
-	}
+	/*
+		room, err := store.GetRoom(request.RoomID)
+		if err != nil {
+			errInfo = fmt.Sprintf("Can not get room %v info!\n%v", request.RoomID, err)
+			logs.Error(errInfo)
+			response.Err = errInfo
+			c.JSON(http.StatusInternalServerError, response)
+			return
+		}
+		err = store.AddPlayerToRoom(request.RoomID, &store.Player{
+			ID:   request.UID,
+			Name: request.Name})
+		if err != nil {
+			errInfo = fmt.Sprintf("Can not add room creater to room!\n%v", err)
+			logs.Emergency(errInfo)
+			response.Err = errInfo
+			c.JSON(http.StatusInternalServerError, response)
+			return
+		}
 
-	players, err := store.GetAllPlayersInRoom(request.RoomID)
-	if err != nil {
-		errInfo = fmt.Sprintf(
-			"Can not get players in room %v \n%v", request.RoomID, err)
-		logs.Emergency(errInfo)
-		response.Err = errInfo
-		c.JSON(http.StatusInternalServerError, response)
+		players, err := store.GetAllPlayersInRoom(request.RoomID)
+		if err != nil {
+			errInfo = fmt.Sprintf(
+				"Can not get players in room %v \n%v", request.RoomID, err)
+			logs.Emergency(errInfo)
+			response.Err = errInfo
+			c.JSON(http.StatusInternalServerError, response)
+			return
+		}
+		response.ID = request.RoomID
+		response.Players = *players
+		response.Err = ""
+		response.Number = countPlayers(room)
+		c.JSON(http.StatusCreated, response)
+		logs.Info("Response: %v", response)
 		return
-	}
-	response.ID = request.RoomID
-	response.Players = *players
-	response.Err = ""
-	response.Number = countPlayers(room)
-	c.JSON(http.StatusCreated, response)
-	logs.Info("Response: %v", response)
-	return
+	*/
 }

@@ -20,15 +20,18 @@ type roomCreationResponse struct {
 	Err    string `json:"err"`
 }
 
-type roomEnterRequset struct {
+type gameRequset struct {
 	UID    string `json:"uid"`
+	OP     string `json:"op"`
 	Name   string `json:"name"`
 	RoomID string `json:"room_id"`
 }
 
-type roomEnterResponse struct {
+type gameResponse struct {
 	ID      string         `json:"id"`
+	OP      string         `json:"op"`
 	Number  uint           `json:"number"`
 	Players []store.Player `json:"players"`
+	Success bool           `json:"success"`
 	Err     string         `json:"err"`
 }

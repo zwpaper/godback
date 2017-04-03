@@ -22,6 +22,11 @@ const (
 )
 
 const (
+	OPEnter     = "enter"
+	OPEnterSucc = "enterSucc"
+)
+
+const (
 	StatusLive = "live"
 	StatusDead = "dead"
 )
