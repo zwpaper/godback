@@ -15,7 +15,7 @@ type roomCreationRequset struct {
 }
 
 type roomCreationResponse struct {
-	ID     string `json:"id"`
+	ID     string `json:"room_id"`
 	Number uint   `json:"number"`
 	Err    string `json:"err"`
 }
