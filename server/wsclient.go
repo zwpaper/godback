@@ -6,9 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/astaxie/beego/logs"
 	"github.com/gorilla/websocket"
-	"github.com/zwpaper/godback/store"
 	"github.com/zwpaper/godback/utils"
 )
 
@@ -38,7 +36,7 @@ var upgrader = websocket.Upgrader{
 
 // Client is a middleman between the websocket connection and the hub.
 type Client struct {
-	hub *Hub
+	game *Game
 
 	// Device id
 	ID string
@@ -57,19 +55,20 @@ type Client struct {
 // reads from this goroutine.
 func (c *Client) readPump() {
 	defer func() {
-		c.hub.unregister <- c
+		c.game.unregister <- c
 		c.conn.Close()
 	}()
 	c.conn.SetReadLimit(maxMessageSize)
 	c.conn.SetReadDeadline(time.Now().Add(pongWait))
 	c.conn.SetPongHandler(func(string) error { c.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
 
-	request := &gameRequset{}
+	request := &gameRequest{}
 	for {
 		_, message, err := c.conn.ReadMessage()
+		logger.Debug("Received: %v", string(message))
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway) {
-				logs.Error("error: %v", err)
+				logger.Error("error: %v", err)
 			}
 			break
 		}
@@ -77,58 +76,18 @@ func (c *Client) readPump() {
 		err = json.Unmarshal(message, request)
 		if err != nil {
 			errInfo = fmt.Sprintf("When receive game request: %v", err)
-			logs.Emergency(errInfo)
+			logger.Emergency(errInfo)
 			continue
 		}
 		switch {
 		case request.OP == utils.OPEnter:
-			c.handleEnterRoom(request)
+			c.ID = request.UID
+			c.game.register <- c
+			c.game.Pipe <- request
+			// c.handleEnterRoom(request)
 		}
 		//c.hub.broadcast <- message
 	}
-}
-
-func (c *Client) handleEnterRoom(r *gameRequset) {
-	response := &gameResponse{
-		OP:      utils.OPEnterSucc,
-		Success: false}
-	var (
-		players *[]store.Player
-	)
-	room, err := store.GetRoom(r.RoomID)
-	if err != nil {
-		errInfo = fmt.Sprintf("Can not get room %v info!\n%v", r.RoomID, err)
-		goto ErrorReturn
-	}
-	err = store.AddPlayerToRoom(r.RoomID, &store.Player{
-		ID:   r.UID,
-		Name: r.Name})
-	if err != nil {
-		errInfo = fmt.Sprintf("Can not add room creater to room!\n%v", err)
-		goto ErrorReturn
-	}
-
-	players, err = store.GetAllPlayersInRoom(r.RoomID)
-	if err != nil {
-		errInfo = fmt.Sprintf(
-			"Can not get players in room %v \n%v", r.RoomID, err)
-		goto ErrorReturn
-	}
-	logs.Info("Added %v to room %v", r.Name, r.RoomID)
-	response.Players = *players
-	response.Success = true
-	response.Err = ""
-	response.Number = countPlayers(room)
-	logs.Info("Response: %v", response)
-	c.conn.WriteJSON(response)
-	return
-
-ErrorReturn:
-	logs.Error(errInfo)
-	response.Err = errInfo
-	c.conn.WriteJSON(response)
-	return
-
 }
 
 // writePump pumps messages from the hub to the websocket connection.
@@ -178,15 +137,14 @@ func (c *Client) writePump() {
 }
 
 // serveWs handles websocket requests from the peer.
-func serveWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
+func serveWs(g *Game, w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		logs.Error("%v", err)
+		logger.Error("%v", err)
 		return
 	}
-	client := &Client{hub: hub, conn: conn, send: make(chan []byte, 256)}
-	client.hub.register <- client
-	logs.Info("added a client to hub")
+	client := &Client{game: g, conn: conn, send: make(chan []byte, 256)}
+	logger.Info("a client connect to server")
 	go client.writePump()
 	client.readPump()
 }

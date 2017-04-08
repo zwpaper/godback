@@ -1,6 +1,8 @@
 package server
 
-type Hub struct {
+type Handler func() string
+
+type Game struct {
 	// device id to client
 	clients map[string]*Client
 
@@ -11,34 +13,33 @@ type Hub struct {
 
 	// Unregister requests from clients.
 	unregister chan *Client
+
+	size uint
+	// State Machine
+	Handlers   map[string]Handler
+	StartState string
+	EndStates  map[string]bool
+	Pipe       chan *gameRequest
 }
 
-func newHub() *Hub {
-	return &Hub{
-		broadcast:  make(chan []byte),
-		register:   make(chan *Client),
-		unregister: make(chan *Client),
-		clients:    make(map[string]*Client),
-	}
-}
-
-func (h *Hub) run() {
+func (g *Game) run() {
 	for {
 		select {
-		case client := <-h.register:
-			h.clients[client.ID] = client
-		case client := <-h.unregister:
-			if _, ok := h.clients[client.ID]; ok {
-				delete(h.clients, client.ID)
+		case client := <-g.register:
+			logger.Info("%v resigter to game", client.ID)
+			g.clients[client.ID] = client
+		case client := <-g.unregister:
+			if _, ok := g.clients[client.ID]; ok {
+				delete(g.clients, client.ID)
 				close(client.send)
 			}
-		case message := <-h.broadcast:
-			for _, client := range h.clients {
+		case message := <-g.broadcast:
+			for _, client := range g.clients {
 				select {
 				case client.send <- message:
-				default:
-					close(client.send)
-					delete(h.clients, client.ID)
+					//				default:
+					//					close(client.send)
+					//					delete(g.clients, client.ID)
 				}
 			}
 		}

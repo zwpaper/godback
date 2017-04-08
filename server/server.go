@@ -1,12 +1,19 @@
 package server
 
-import "github.com/gin-gonic/gin"
+import (
+	"github.com/zwpaper/godback/utils"
+
+	"github.com/astaxie/beego/logs"
+	"github.com/gin-gonic/gin"
+)
 
 var HTTPServer *gin.Engine
-var roomHub map[string]*Hub
+var roomHub map[string]*Game
+var logger *logs.BeeLogger
 
 func init() {
-	roomHub = map[string]*Hub{}
+	logger = utils.Log
+	roomHub = map[string]*Game{}
 	HTTPServer = gin.Default()
 	setRoute(HTTPServer)
 }

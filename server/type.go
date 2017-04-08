@@ -20,7 +20,7 @@ type roomCreationResponse struct {
 	Err    string `json:"err"`
 }
 
-type gameRequset struct {
+type gameRequest struct {
 	UID    string `json:"uid"`
 	OP     string `json:"op"`
 	Name   string `json:"name"`
