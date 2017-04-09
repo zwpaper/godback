@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/zwpaper/godback/store"
-	"github.com/zwpaper/godback/utils"
 )
 
 func (g *Game) AddState(handlerName string, handlerFn Handler) {
@@ -66,7 +65,7 @@ func (g *Game) enterGame() string {
 			}
 
 			response := &gameResponse{
-				OP:      utils.OPEnterSucc,
+				OP:      stateEnter,
 				Success: false}
 			players := &[]store.Player{}
 			room, err := store.GetRoom(request.RoomID)
@@ -106,6 +105,7 @@ func (g *Game) enterGame() string {
 			}
 			g.broadcast <- msg
 			if len(g.clients) == int(g.size) {
+				logger.Info("All player in, goto", stateReady)
 				return stateReady
 			}
 		case <-g.End:

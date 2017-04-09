@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/zwpaper/godback/utils"
 )
 
 const (
@@ -80,7 +79,7 @@ func (c *Client) readPump() {
 			continue
 		}
 		switch {
-		case request.OP == utils.OPEnter:
+		case request.OP == stateEnter:
 			c.ID = request.UID
 			c.game.register <- c
 			c.game.Pipe <- request
