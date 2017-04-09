@@ -289,13 +289,14 @@ func AddPlayerToRoom(roomID string, player *Player) (err error) {
 		}
 	}
 
-	playerJSON, err := json.Marshal(*player)
-	if err != nil {
-		log.Emergency(err.Error())
-		return err
-	}
-
 	for i := len(playersNode.Nodes) + 1; i < 16; i++ {
+		player.Order = i
+		playerJSON, err := json.Marshal(*player)
+		if err != nil {
+			log.Emergency(err.Error())
+			return err
+		}
+
 		err = set(path.Join(playerURL, strconv.Itoa(i)), string(playerJSON), nil)
 		if err != nil {
 			errInfo = fmt.Sprintf("Can not add player %v to room %v: %v",
@@ -340,4 +341,55 @@ func GetAllPlayersInRoom(roomID string) (*[]Player, error) {
 	}
 	log.Info("Get players: %v", players)
 	return players, nil
+}
+
+func GetPlayerInRoom(playerID int, roomID string) (*Player, error) {
+	playerURL := path.Join(utils.PathRoom, utils.PathUsed, roomID,
+		utils.PathPlayer, strconv.Itoa(playerID))
+	playerNode, err := get(playerURL)
+	if err != nil {
+		errInfo = fmt.Sprintf("Can not get player in %v!", roomID)
+		log.Error(errInfo)
+		return nil, fmt.Errorf(errInfo)
+	}
+
+	player := &Player{}
+	err = json.Unmarshal([]byte(playerNode.Value), player)
+	if err != nil {
+		errInfo = fmt.Sprintf("Can not get player %v config: %v",
+			playerID, err)
+		log.Error(errInfo)
+		return nil, fmt.Errorf(errInfo)
+	}
+
+	log.Info("Get player: %v", player)
+	return player, nil
+}
+
+func UpdatePlayerInRoom(roomID string, player *Player) (err error) {
+	roomURL := path.Join(utils.PathRoom, utils.PathUsed, roomID)
+	playerURL := path.Join(roomURL, utils.PathPlayer, strconv.Itoa(player.Order))
+
+	_, err = get(playerURL)
+	if err != nil {
+		errInfo = fmt.Sprintf(
+			"Can not get player %v in room %v", player, roomID)
+		log.Emergency(errInfo)
+		return fmt.Errorf(errInfo)
+	}
+
+	playerJSON, err := json.Marshal(*player)
+	if err != nil {
+		log.Emergency(err.Error())
+		return err
+	}
+
+	err = set(playerURL, string(playerJSON), nil)
+	if err != nil {
+		errInfo = fmt.Sprintf("Can not update player %v to room %v: %v",
+			player.Name, roomID, err)
+		log.Notice(errInfo)
+		return fmt.Errorf(errInfo)
+	}
+	return nil
 }

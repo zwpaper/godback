@@ -33,6 +33,7 @@ func (g *Game) Execute() {
 const (
 	stateEnter = "enter"
 	stateReady = "ready"
+	stateDark  = "dark"
 	stateEnd   = "end"
 )
 
@@ -49,6 +50,7 @@ func newGame(n uint) (g *Game) {
 		Pipe:       make(chan *gameRequest),
 	}
 	g.AddState(stateEnter, g.enterGame)
+	g.AddState(stateReady, g.readyGame)
 
 	return g
 }
@@ -105,8 +107,75 @@ func (g *Game) enterGame() string {
 			}
 			g.broadcast <- msg
 			if len(g.clients) == int(g.size) {
-				logger.Info("All player in, goto", stateReady)
+				logger.Info("All player in, goto %v", stateReady)
 				return stateReady
+			}
+		case <-g.End:
+			return stateEnd
+		}
+	}
+}
+
+func (g *Game) readyGame() string {
+	logger.Info("Enter state: %v", stateReady)
+	for {
+		select {
+		case request := <-g.Pipe:
+			if request.OP != stateReady {
+				errInfo = fmt.Sprintf("Request not match state %v", stateEnter)
+				logger.Emergency(errInfo)
+				continue
+			}
+
+			response := &gameResponse{
+				OP:      stateReady,
+				Success: false}
+			player, err := store.GetPlayerInRoom(request.TargetNum, request.RoomID)
+			if err != nil {
+				errInfo = fmt.Sprintf(
+					"Can not get player in room %v \n%v", request.RoomID, err)
+				logger.Error(errInfo)
+				continue
+			}
+			player.Status = stateReady
+			err = store.UpdatePlayerInRoom(request.RoomID, player)
+			if err != nil {
+				errInfo = fmt.Sprintf("Can not update player %v in room %v!\n%v",
+					player, request.RoomID, err)
+				logger.Error(errInfo)
+				continue
+			}
+			logger.Info("Update player %v in room %v", request.Name, request.RoomID)
+
+			players, err := store.GetAllPlayersInRoom(request.RoomID)
+			if err != nil {
+				errInfo = fmt.Sprintf(
+					"Can not get players in room %v \n%v", request.RoomID, err)
+				logger.Error(errInfo)
+				continue
+			}
+
+			response.Players = *players
+			response.Success = true
+			response.Err = ""
+			response.Number = g.size
+			logger.Info("Response: %v", response)
+
+			msg, err := json.Marshal(response)
+			if err != nil {
+				logger.Emergency(err.Error())
+				continue
+			}
+			g.broadcast <- msg
+			count := 0
+			for _, p := range *players {
+				if p.Status == stateReady {
+					count++
+				}
+			}
+			if count == int(g.size) {
+				logger.Info("All player ready, goto %v", stateDark)
+				return stateDark
 			}
 		case <-g.End:
 			return stateEnd

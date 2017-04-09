@@ -21,10 +21,11 @@ type roomCreationResponse struct {
 }
 
 type gameRequest struct {
-	UID    string `json:"uid"`
-	OP     string `json:"op"`
-	Name   string `json:"name"`
-	RoomID string `json:"room_id"`
+	UID       string `json:"uid"`
+	OP        string `json:"op"`
+	Name      string `json:"name"`
+	RoomID    string `json:"room_id"`
+	TargetNum int    `json:"target_number"`
 }
 
 type gameResponse struct {
