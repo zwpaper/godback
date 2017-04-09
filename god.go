@@ -15,12 +15,12 @@ func init() {
 func main() {
 	logs.Info("Welcome to God of werewolves")
 	logs.Debug("Config: %v", utils.Conf)
-	err := utils.SetBell(utils.Conf.AlarmConf.Url, utils.Conf.AlarmConf.Module,
-		[]string{},
-		utils.Conf.AlarmConf.Timeout, 1, utils.Conf.AlarmConf.IsOn)
-	if err != nil {
-		logs.Emergency("Can not set Alarm: %v", err)
-	}
+	//	err := utils.SetBell(utils.Conf.AlarmConf.Url, utils.Conf.AlarmConf.Module,
+	//		[]string{},
+	//		utils.Conf.AlarmConf.Timeout, 1, utils.Conf.AlarmConf.IsOn)
+	//	if err != nil {
+	//		logs.Emergency("Can not set Alarm: %v", err)
+	//	}
 
 	store.Init(utils.Conf.EtcdConf.BindAddrs, utils.Conf.EtcdConf.Prefix)
 	god := server.HTTPServer

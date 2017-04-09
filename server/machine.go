@@ -33,6 +33,8 @@ func (g *Game) Execute() {
 
 const (
 	stateEnter = "enter"
+	stateReady = "ready"
+	stateEnd   = "end"
 )
 
 func newGame(n uint) (g *Game) {
@@ -57,14 +59,7 @@ func (g *Game) enterGame() string {
 	for {
 		select {
 		case request := <-g.Pipe:
-			// 			request := &gameRequset{}
-			// 			err := json.Unmarshal(recv, request)
-			// 			if err != nil {
-			// 				errInfo = fmt.Sprintf("When receive game request: %v", err)
-			// 				logger.Emergency(errInfo)
-			// 				continue
-			// 			}
-			if request.OP != utils.OPEnter {
+			if request.OP != stateEnter {
 				errInfo = fmt.Sprintf("Request not match state %v", stateEnter)
 				logger.Emergency(errInfo)
 				continue
@@ -110,6 +105,11 @@ func (g *Game) enterGame() string {
 				continue
 			}
 			g.broadcast <- msg
+			if len(g.clients) == int(g.size) {
+				return stateReady
+			}
+		case <-g.End:
+			return stateEnd
 		}
 	}
 }

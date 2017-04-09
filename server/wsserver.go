@@ -20,6 +20,7 @@ type Game struct {
 	StartState string
 	EndStates  map[string]bool
 	Pipe       chan *gameRequest
+	End        chan struct{}
 }
 
 func (g *Game) run() {
