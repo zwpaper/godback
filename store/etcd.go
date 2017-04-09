@@ -343,27 +343,22 @@ func GetAllPlayersInRoom(roomID string) (*[]Player, error) {
 	return players, nil
 }
 
-func GetPlayerInRoom(playerID int, roomID string) (*Player, error) {
-	playerURL := path.Join(utils.PathRoom, utils.PathUsed, roomID,
-		utils.PathPlayer, strconv.Itoa(playerID))
-	playerNode, err := get(playerURL)
+func GetPlayerInRoom(playerID, roomID string) (*Player, error) {
+	players, err := GetAllPlayersInRoom(roomID)
 	if err != nil {
-		errInfo = fmt.Sprintf("Can not get player in %v!", roomID)
-		log.Error(errInfo)
-		return nil, fmt.Errorf(errInfo)
+		return nil, err
 	}
 
-	player := &Player{}
-	err = json.Unmarshal([]byte(playerNode.Value), player)
-	if err != nil {
-		errInfo = fmt.Sprintf("Can not get player %v config: %v",
-			playerID, err)
-		log.Error(errInfo)
-		return nil, fmt.Errorf(errInfo)
+	for _, p := range *players {
+		if p.ID == playerID {
+			log.Info("Got player %v", p)
+			return &p, nil
+		}
 	}
 
-	log.Info("Get player: %v", player)
-	return player, nil
+	errInfo = fmt.Sprintf("No player %v found", playerID)
+	log.Error(errInfo)
+	return nil, fmt.Errorf(errInfo)
 }
 
 func UpdatePlayerInRoom(roomID string, player *Player) (err error) {

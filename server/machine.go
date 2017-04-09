@@ -130,7 +130,7 @@ func (g *Game) readyGame() string {
 			response := &gameResponse{
 				OP:      stateReady,
 				Success: false}
-			player, err := store.GetPlayerInRoom(request.TargetNum, request.RoomID)
+			player, err := store.GetPlayerInRoom(request.UID, request.RoomID)
 			if err != nil {
 				errInfo = fmt.Sprintf(
 					"Can not get player in room %v \n%v", request.RoomID, err)
