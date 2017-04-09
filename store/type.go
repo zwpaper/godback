@@ -16,9 +16,9 @@ type Room struct {
 }
 
 type Player struct {
-	ID     string
-	Order  int
-	Name   string
-	Char   string
-	Status string
+	ID     string `json:"id"`
+	Order  int    `json:"order"`
+	Name   string `json:"name"`
+	Char   string `json:"char"`
+	Status string `json:"status"`
 }
