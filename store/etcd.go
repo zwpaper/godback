@@ -260,7 +260,7 @@ func GetRoom(id string) (*Room, error) {
 
 func AddPlayerToRoom(roomID string, player *Player) (err error) {
 	roomURL := path.Join(utils.PathRoom, utils.PathUsed, roomID)
-	playerURL := path.Join(roomURL, utils.PathPlayer, player.ID)
+	playerURL := path.Join(roomURL, utils.PathPlayer)
 	_, err = get(roomURL)
 	if err != nil {
 		errInfo = fmt.Sprintf("Room %v not exist!", roomID)
@@ -268,20 +268,44 @@ func AddPlayerToRoom(roomID string, player *Player) (err error) {
 		return fmt.Errorf(errInfo)
 	}
 
+	playersNode, err := get(playerURL)
+	if err != nil {
+		log.Notice("Player dir for room %v not exist, creating", roomID)
+		op := &client.SetOptions{
+			Dir: true}
+		err = set(playerURL, "", op)
+		if err != nil {
+			errInfo = fmt.Sprintf("Can not create player dir for room %v", roomID)
+			log.Emergency(errInfo)
+			return fmt.Errorf(errInfo)
+		}
+
+		playersNode, err = get(playerURL)
+		if err != nil {
+			errInfo = fmt.Sprintf(
+				"Can not get players after creating player dir for room %v", roomID)
+			log.Emergency(errInfo)
+			return fmt.Errorf(errInfo)
+		}
+	}
+
 	playerJSON, err := json.Marshal(*player)
 	if err != nil {
 		log.Emergency(err.Error())
 		return err
 	}
-	err = set(playerURL, string(playerJSON), nil)
-	if err != nil {
-		errInfo = fmt.Sprintf("Can not add player %v to room %v: %v",
-			player.Name, roomID, err)
-		log.Error(errInfo)
-		return fmt.Errorf(errInfo)
-	}
 
-	return nil
+	for i := len(playersNode.Nodes) + 1; i < 16; i++ {
+		err = set(path.Join(playerURL, strconv.Itoa(i)), string(playerJSON), nil)
+		if err != nil {
+			errInfo = fmt.Sprintf("Can not add player %v to room %v: %v",
+				player.Name, roomID, err)
+			log.Notice(errInfo)
+			continue
+		}
+		return nil
+	}
+	return fmt.Errorf("Can not add player %v to room %v", player, roomID)
 }
 
 func GetAllPlayersInRoom(roomID string) (*[]Player, error) {
